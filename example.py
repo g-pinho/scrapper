@@ -3,16 +3,35 @@ import json
 from fast_flights import FlightData, Passengers, create_filter, get_flights_from_filter
 
 def flight_to_dict(flight):
+    # Support schema.Flight (HTML path) with typed fields
+    price = getattr(flight, "price", None)
+    if price is not None and hasattr(price, "amount"):
+        price_out = {"amount": str(price.amount), "currency": price.currency}
+    else:
+        price_out = price
+    dep_dt = getattr(flight, "departure_datetime", None)
+    arr_dt = getattr(flight, "arrival_datetime", None)
+    duration_val = getattr(flight, "duration", None)
+    duration_out = (
+        getattr(flight, "duration_display", None)
+        or (str(duration_val) if duration_val is not None else None)
+    )
+    delay_val = getattr(flight, "delay", None)
+    delay_out = (
+        delay_val.total_seconds() if hasattr(delay_val, "total_seconds") and delay_val else None
+    )
+    if delay_out is None:
+        delay_out = getattr(flight, "delay_display", None)
     return {
-        "is_best": getattr(flight, 'is_best', None),
-        "name": getattr(flight, 'name', None),
-        "departure": getattr(flight, 'departure', None),
-        "arrival": getattr(flight, 'arrival', None),
-        "arrival_time_ahead": getattr(flight, 'arrival_time_ahead', None),
-        "duration": getattr(flight, 'duration', None),
-        "stops": getattr(flight, 'stops', None),
-        "delay": getattr(flight, 'delay', None),
-        "price": getattr(flight, 'price', None),
+        "is_best": getattr(flight, "is_best", None),
+        "name": getattr(flight, "name", None),
+        "departure": dep_dt.isoformat() if dep_dt else getattr(flight, "departure_display", None),
+        "arrival": arr_dt.isoformat() if arr_dt else getattr(flight, "arrival_display", None),
+        "arrival_time_ahead": getattr(flight, "arrival_time_ahead", None),
+        "duration": duration_out,
+        "stops": getattr(flight, "stops", None),
+        "delay": delay_out,
+        "price": price_out,
     }
 
 def result_to_dict(result):

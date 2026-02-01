@@ -1,5 +1,6 @@
 import re
 import json
+from datetime import date, datetime
 from typing import List, Literal, Optional, Union
 
 from selectolax.lexbor import LexborHTMLParser, LexborNode
@@ -7,6 +8,7 @@ from selectolax.lexbor import LexborHTMLParser, LexborNode
 from .decoder import DecodedResult, ResultDecoder
 from .schema import Flight, Result
 from .flights_impl import FlightData, Passengers
+from . import parse_utils
 from .filter import TFSData
 from .fallback_playwright import fallback_playwright_fetch
 from .bright_data_fetch import bright_data_fetch
@@ -146,7 +148,12 @@ def get_flights_from_filter(
         res = fallback_playwright_fetch(params, request_kwargs=req_kwargs)
 
     try:
-        return parse_response(res, data_source)
+        first_leg_date = None
+        if getattr(filter, "flight_data", None) and len(filter.flight_data) > 0:
+            first_leg_date = datetime.strptime(
+                filter.flight_data[0].date, "%Y-%m-%d"
+            ).date()
+        return parse_response(res, data_source, first_leg_date=first_leg_date)
     except RuntimeError as e:
         if mode == "fallback":
             return get_flights_from_filter(filter, mode="force-fallback", request_kwargs=req_kwargs, cookies=None, cookie_consent=cookie_consent)
@@ -204,11 +211,12 @@ def get_flights(
 
 
 def parse_response(
-     r: Response,
-     data_source: DataSource,
-     *,
-     dangerously_allow_looping_last_item: bool = False,
- ) -> Union[Result, DecodedResult, None]:
+    r: Response,
+    data_source: DataSource,
+    *,
+    first_leg_date: Optional[date] = None,
+    dangerously_allow_looping_last_item: bool = False,
+) -> Union[Result, DecodedResult, None]:
     class _blank:
         def text(self, *_, **__):
             return ""
@@ -267,25 +275,41 @@ def parse_response(
             delay = safe(item.css_first(".GsCCve")).text() or None
 
             # Get prices
-            price = safe(item.css_first(".YMlIz.FpEdX")).text() or "0"
+            price_raw = safe(item.css_first(".YMlIz.FpEdX")).text() or "0"
 
             # Stops formatting
             try:
                 stops_fmt = 0 if stops == "Nonstop" else int(stops.split(" ", 1)[0])
             except ValueError:
-                stops_fmt = "Unknown"
+                stops_fmt = 0
+
+            departure_display = " ".join(departure_time.split())
+            arrival_display = " ".join(arrival_time.split())
+            dep_dt, _ = parse_utils.parse_departure_arrival(
+                departure_display, first_leg_date
+            )
+            arr_dt, _ = parse_utils.parse_departure_arrival(
+                arrival_display, first_leg_date
+            )
+            duration_delta, duration_display = parse_utils.parse_duration(duration)
+            delay_delta, delay_display = parse_utils.parse_delay(delay)
+            price_obj = parse_utils.parse_price(price_raw.replace(",", ""))
 
             flights.append(
                 {
                     "is_best": is_best_flight,
                     "name": name,
-                    "departure": " ".join(departure_time.split()),
-                    "arrival": " ".join(arrival_time.split()),
+                    "departure_datetime": dep_dt,
+                    "departure_display": departure_display,
+                    "arrival_datetime": arr_dt,
+                    "arrival_display": arrival_display,
                     "arrival_time_ahead": time_ahead,
-                    "duration": duration,
+                    "duration": duration_delta,
+                    "duration_display": duration_display,
                     "stops": stops_fmt,
-                    "delay": delay,
-                    "price": price.replace(",", ""),
+                    "delay": delay_delta,
+                    "delay_display": delay_display,
+                    "price": price_obj,
                 }
             )
 
