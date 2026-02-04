@@ -13,6 +13,7 @@ class Price:
     Currency is inferred from common symbols when parsing (e.g. $ -> USD, € -> EUR);
     otherwise defaults to USD.
     """
+
     amount: Decimal
     currency: str
 
@@ -38,3 +39,22 @@ class Flight:
     delay: Optional[timedelta]
     delay_display: Optional[str]
     price: Price
+    flight_number: str
+    segments: List[FlightSegment]
+
+
+@dataclass
+class FlightSegment:
+    flight_number: str
+    airline: str
+    departure_airport: str
+    departure_airport_name: str
+    arrival_airport: str
+    arrival_airport_name: str
+    departure_datetime: Optional[datetime]
+    departure_display: str
+    arrival_datetime: Optional[datetime]
+    arrival_display: str
+    duration: timedelta
+    duration_display: str
+    aircraft: Optional[str]

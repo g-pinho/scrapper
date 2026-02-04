@@ -22,6 +22,7 @@ dependencies = [
   "primp",
   "protobuf>=5.27.0",
   "selectolax",
+  "typing_extensions",
 ]
 
 [project.optional-dependencies]
@@ -38,9 +39,6 @@ local = [
 packages = [
     "fast_flights"
 ]
-
-[tool.pyright]
-pythonVersion = '3.8'
 
 [dependency-groups]
 dev = [

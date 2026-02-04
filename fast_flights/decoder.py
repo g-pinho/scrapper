@@ -7,7 +7,8 @@ from typing_extensions import TypeAlias, override
 from .flights_impl import ItinerarySummary
 
 DecodePath: TypeAlias = List[int]
-NLBaseType: TypeAlias = Union[int, str, None, Sequence['NLBaseType']]
+NLBaseType: TypeAlias = Union[int, str, None, Sequence["NLBaseType"]]
+
 
 # N(ested)L(ist)Data, this class allows indexing using a path, and as an int to make
 # traversal easier within the nested list data
@@ -20,8 +21,12 @@ class NLData(Sequence[NLBaseType]):
             return self.data[decode_path]
         it = self.data
         for index in decode_path:
-            assert isinstance(it, list), f'Found non list type while trying to decode {decode_path}'
-            assert index < len(it), f'Trying to traverse to index out of range when decoding {decode_path}'
+            assert isinstance(
+                it, list
+            ), f"Found non list type while trying to decode {decode_path}"
+            assert index < len(
+                it
+            ), f"Trying to traverse to index out of range when decoding {decode_path}"
             it = it[index]
         return it
 
@@ -29,8 +34,11 @@ class NLData(Sequence[NLBaseType]):
     def __len__(self) -> int:
         return len(self.data)
 
+
 # DecoderKey is used to specify the path to a field from a decoder class
-V = TypeVar('V')
+V = TypeVar("V")
+
+
 @dataclass
 class DecoderKey(Generic[V]):
     decode_path: DecodePath
@@ -39,9 +47,12 @@ class DecoderKey(Generic[V]):
     def decode(self, root: NLData) -> Union[NLBaseType, V]:
         data = root[self.decode_path]
         if isinstance(data, list) and self.decoder:
-            assert self.decoder is not None, f'decoder should be provided in order to further decode NLData instances'
+            assert (
+                self.decoder is not None
+            ), f"decoder should be provided in order to further decode NLData instances"
             return self.decoder(NLData(data))
         return data
+
 
 # Decoder is used to aggregate all fields and their paths
 class Decoder(abc.ABC):
@@ -55,8 +66,7 @@ class Decoder(abc.ABC):
         return decoded
 
     @classmethod
-    def decode(cls, root: Union[list, NLData]) -> ...:
-        ...
+    def decode(cls, root: Union[list, NLData]) -> ...: ...
 
 
 # Type Aliases
@@ -67,11 +77,13 @@ AirportName: TypeAlias = str
 ProtobufStr: TypeAlias = str
 Minute: TypeAlias = int
 
+
 @dataclass
 class Codeshare:
     airline_code: AirlineCode
     flight_number: int
     airline_name: AirlineName
+
 
 @dataclass
 class Flight:
@@ -95,6 +107,7 @@ class Flight:
     seat_pitch_short: str
     # seat_pitch_long: str
 
+
 @dataclass
 class Layover:
     minutes: Minute
@@ -104,6 +117,7 @@ class Layover:
     arrival_airport: AirportCode
     arrival_airport_name: AirportName
     arrival_airport_city: AirportName
+
 
 @dataclass
 class Itinerary:
@@ -120,6 +134,7 @@ class Itinerary:
     arrival_time: Tuple[int, int]
     itinerary_summary: ItinerarySummary
 
+
 @dataclass
 class DecodedResult:
     # raw unparsed data
@@ -131,6 +146,7 @@ class DecodedResult:
     # airport_details: Any
     # unknown_1: Any
 
+
 class CodeshareDecoder(Decoder):
     AIRLINE_CODE: DecoderKey[AirlineCode] = DecoderKey([0])
     FLIGHT_NUMBER: DecoderKey[str] = DecoderKey([1])
@@ -141,12 +157,13 @@ class CodeshareDecoder(Decoder):
     def decode(cls, root: Union[list, NLData]) -> List[Codeshare]:
         return [Codeshare(**cls.decode_el(NLData(el))) for el in root]
 
+
 class FlightDecoder(Decoder):
     OPERATOR: DecoderKey[AirlineName] = DecoderKey([2])
     DEPARTURE_AIRPORT: DecoderKey[AirportCode] = DecoderKey([3])
     DEPARTURE_AIRPORT_NAME: DecoderKey[AirportName] = DecoderKey([4])
-    ARRIVAL_AIRPORT: DecoderKey[AirportCode] = DecoderKey([5])
-    ARRIVAL_AIRPORT_NAME: DecoderKey[AirportName] = DecoderKey([6])
+    ARRIVAL_AIRPORT: DecoderKey[AirportCode] = DecoderKey([6])
+    ARRIVAL_AIRPORT_NAME: DecoderKey[AirportName] = DecoderKey([5])
     # SOME_ENUM: DecoderKey[int] = DecoderKey([7])
     # SOME_ENUM: DecoderKey[int] = DecoderKey([9])
     DEPARTURE_TIME: DecoderKey[Tuple[int, int]] = DecoderKey([8])
@@ -167,6 +184,7 @@ class FlightDecoder(Decoder):
     def decode(cls, root: Union[list, NLData]) -> List[Flight]:
         return [Flight(**cls.decode_el(NLData(el))) for el in root]
 
+
 class LayoverDecoder(Decoder):
     MINUTES: DecoderKey[int] = DecoderKey([0])
     DEPARTURE_AIRPORT: DecoderKey[AirportCode] = DecoderKey([1])
@@ -180,6 +198,7 @@ class LayoverDecoder(Decoder):
     @override
     def decode(cls, root: Union[list, NLData]) -> List[Layover]:
         return [Layover(**cls.decode_el(NLData(el))) for el in root]
+
 
 class ItineraryDecoder(Decoder):
     AIRLINE_CODE: DecoderKey[AirlineCode] = DecoderKey([0, 0])
@@ -196,7 +215,9 @@ class ItineraryDecoder(Decoder):
     LAYOVERS: DecoderKey[List[Layover]] = DecoderKey([0, 13], LayoverDecoder.decode)
     # first field of protobuf is the same as [0, 4] on the root? seems like 0,4 is for tracking
     # contains a summary of the flight numbers and the price (as a fixed point sint)
-    ITINERARY_SUMMARY: DecoderKey[ItinerarySummary] = DecoderKey([1], lambda data: ItinerarySummary.from_b64(data[1]))
+    ITINERARY_SUMMARY: DecoderKey[ItinerarySummary] = DecoderKey(
+        [1], lambda data: ItinerarySummary.from_b64(data[1])
+    )
     # contains Flight(s), the price, and a few more
     # FLIGHTS_PROTOBUF: DecoderKey[ProtobufStr] = DecoderKey([8])
     # some struct containing emissions info
@@ -217,5 +238,5 @@ class ResultDecoder(Decoder):
     @classmethod
     @override
     def decode(cls, root: Union[list, NLData]) -> DecodedResult:
-        assert isinstance(root, list), 'Root data must be list type'
+        assert isinstance(root, list), "Root data must be list type"
         return DecodedResult(**cls.decode_el(NLData(root)), raw=root)

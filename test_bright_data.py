@@ -22,13 +22,13 @@ filter = create_filter(
         FlightData(
             date="2025-08-06",
             from_airport="JFK",  # New York
-            to_airport="LAX",    # Los Angeles
+            to_airport="LAX",  # Los Angeles
         ),
         FlightData(
             date="2025-08-10",
             from_airport="LAX",
             to_airport="JFK",
-        )
+        ),
     ],
     trip="round-trip",
     passengers=Passengers(adults=1, children=0, infants_in_seat=0, infants_on_lap=0),
@@ -37,34 +37,54 @@ filter = create_filter(
 )
 
 print("Testing Bright Data integration...")
-print(f"Filter URL: https://www.google.com/travel/flights?tfs={filter.as_b64().decode('utf-8')}")
-print(f"Using Bright Data API URL: {os.environ.get('BRIGHT_DATA_API_URL', 'https://api.brightdata.com/request')}")
+print(
+    f"Filter URL: https://www.google.com/travel/flights?tfs={filter.as_b64().decode('utf-8')}"
+)
+print(
+    f"Using Bright Data API URL: {os.environ.get('BRIGHT_DATA_API_URL', 'https://api.brightdata.com/request')}"
+)
 print(f"Using zone: {os.environ.get('BRIGHT_DATA_SERP_ZONE', 'serp_api1')}")
 print("-" * 80)
 
 try:
     # Get flights using Bright Data mode
     result = get_flights_from_filter(filter, mode="bright-data")
-    
+
     print(f"Current price: {result.current_price}")
     print(f"Found {len(result.flights)} flights\n")
-    
-    # Display flight results
+
+    # Display flight results (schema.Flight with typed fields)
     for i, flight in enumerate(result.flights, 1):
         print(f"Flight {i}:")
         print(f"  Airline: {flight.name}")
-        print(f"  Departure: {flight.departure}")
-        print(f"  Arrival: {flight.arrival}")
-        print(f"  Duration: {flight.duration}")
+        dep = flight.departure_datetime or flight.departure_display
+        arr = flight.arrival_datetime or flight.arrival_display
+        print(f"  Departure: {dep}")
+        print(f"  Arrival: {arr}")
+        print(f"  Duration: {flight.duration_display or flight.duration}")
         print(f"  Stops: {flight.stops}")
-        print(f"  Price: {flight.price}")
+        print(f"  Price: {flight.price.currency} {flight.price.amount}")
         if flight.delay:
             print(f"  Delay: {flight.delay}")
+        elif flight.delay_display:
+            print(f"  Delay: {flight.delay_display}")
         if flight.is_best:
             print("  ⭐ Best flight")
+        print(f"  Flight Number: {flight.flight_number}")
+        if flight.segments:
+            print("  Segments:")
+            for seg in flight.segments:
+                print(
+                    f"    - {seg.airline} {seg.flight_number} ({seg.departure_airport}->{seg.arrival_airport})"
+                )
+                print(
+                    f"      Time: {seg.departure_display} - {seg.arrival_display} ({seg.duration_display})"
+                )
+                print(f"      Date: {seg.departure_datetime} - {seg.arrival_datetime}")
         print()
-        
+
 except Exception as e:
     print(f"Error occurred: {type(e).__name__}: {e}")
     import traceback
+
     traceback.print_exc()

@@ -5,8 +5,8 @@ filter = create_filter(
         # Include more if it's not a one-way trip
         FlightData(
             date="2026-05-23",  # Date of departure
-            from_airport="LHR",  # Departure (airport)
-            to_airport="SLC",  # Arrival (airport)
+            from_airport="OPO",  # Departure (airport)
+            to_airport="BCN",  # Arrival (airport)
         )
     ],
     trip="one-way",  # Trip type
@@ -18,4 +18,5 @@ print(filter.as_b64().decode("utf-8"))
 
 # Do not construct cookies here: `get_flights_from_filter` embeds default cookies
 # and will use them automatically when no cookies are provided.
-print(get_flights_from_filter(filter, mode="common"))
+result = get_flights_from_filter(filter, mode="common")
+print(result.flights[:2])
