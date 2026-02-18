@@ -196,6 +196,7 @@ def get_flights(
     cookies: bytes | None = None,
     request_kwargs: dict | None = None,
     cookie_consent: bool = True,
+    currency: str = "",
 ) -> Union[Result, DecodedResult, None]:
     # If the caller didn't supply a Passengers object, build one from the
     # convenience counters. Default to 1 adult when no adults count provided
@@ -224,6 +225,7 @@ def get_flights(
         cookies=cookies,
         request_kwargs=request_kwargs,
         cookie_consent=cookie_consent,
+        currency=currency,
     )
 
 
