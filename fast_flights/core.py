@@ -115,6 +115,7 @@ def get_flights_from_filter(
     params = {
         "tfs": data.decode("utf-8"),
         "hl": "en",
+        "gl": "us",
         "tfu": "EgQIABABIgA",
         "curr": currency,
     }
